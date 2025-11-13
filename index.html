@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Little Robot – Lost In Space</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka+One:wght@400&display=swap');
+    html, body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: radial-gradient(ellipse at center, #101532 0%, #110c2b 50%, #000008 100%);
+      font-family: 'Fredoka One', 'Comic Sans MS', cursive, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #gameContainer {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      touch-action: none;
+    }
+    #starfield {
+      position: absolute;
+      width: 100vw;
+      height: 100vh;
+      left: 0; top: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+    #gameCanvas {
+      position: absolute;
+      width: 100vw;
+      height: 100vh;
+      left: 0; top: 0;
+      background: transparent;
+      z-index: 1;
+      cursor: pointer;
+      touch-action: none;
+    }
+    #dpad {
+      position: absolute;
+      bottom: 40px;
+      left: 40px;
+      width: 156px;
+      height: 156px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    .dpad-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+    }
+    .dpad-btn {
+      background: #252e56;
+      color: #FFD700;
+      border: 3px solid #FFD700;
+      border-radius: 50%;
+      font-size: 2.2em;
+      width: 56px;
+      height: 56px;
+      margin: 4px;
+      outline: none;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s, color 0.15s, transform 0.12s;
+      touch-action: manipulation;
+      box-shadow: 0 4px 12px #000a, 0 1px 0 #fff2;
+    }
+    .dpad-btn:active, .dpad-btn.touch-active {
+      background: #FFD700;
+      color: #202040;
+      transform: scale(1.12);
+    }
+    /* Updated vertical header zone */
+    #gameHeaderZone {
+      width: 100vw;
+      z-index: 22;
+      position: absolute;
+      left: 0; top: 0;
+      padding-top: 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+    }
+    #gameTitleStack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+    #header {
+      background: rgba(16,16,40,.8);
+      padding: 10px 30px;
+      border-radius: 14px;
+      font-size: 1.7em;
+      font-weight: 600;
+      color: #FFD700;
+      text-shadow: 2px 2px 5px rgba(0,0,0,0.7);
+      letter-spacing: .02em;
+      white-space: pre-line;
+      z-index: 22;
+      pointer-events:auto;
+    }
+    #badgeTray {
+      background: rgba(20,20,44,0.85);
+      padding: 9px 16px 9px 9px;
+      border-radius: 16px;
+      border: 2px solid #FFD700;
+      box-shadow: 0 4px 14px #0005;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      z-index:22;
+      pointer-events:auto;
+    }
+    @media (max-width: 800px) {
+      #header { font-size: 1.16em; padding: 7px 10px;}
+      #badgeTray { padding: 8px 9px 8px 6px;}
+      #gameHeaderZone { padding-top: 7px; }
+    }
+    #badges {
+      display: flex;
+      gap: 3px;
+      margin-left: 4px;
+    }
+    .badge {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: #30303a;
+      border: 2px solid #ffa800;
+      margin-right: 3px;
+      box-shadow: 0 2px 6px #0007;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4em;
+      color: #fff;
+      opacity: 0.35;
+      position: relative;
+      transition: opacity .2s, background .2s, border .2s, color .2s;
+    }
+    .badge.collected {
+      opacity: 1;
+      background: linear-gradient(135deg,#FFD700 60%,#df944b 100%);
+      color: #23265e;
+      border-color: #FFD700;
+      font-weight:bold;
+      animation: drop-badge 0.6s cubic-bezier(.8,1.7,.4,-0.2) 1;
+    }
+    @keyframes drop-badge {
+      0% { transform: scale(.8) translateY(-60px) rotate(-15deg); opacity: .05;}
+      65% { transform: scale(1.13) translateY(14px) rotate(4deg);}
+      100% { transform: scale(1) translateY(0) rotate(0deg); opacity:1;}
+    }
+    #factsModal {
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      display: none;
+      z-index: 30;
+      background: linear-gradient(135deg,#23265e 70%,#252e56 100%);
+      color: #FFD700;
+      border: 4px solid #FFD700;
+      border-radius: 22px;
+      padding: 32px 28px 20px 28px;
+      min-width: 270px;
+      max-width: 95vw;
+      box-shadow: 0 8px 32px #0008;
+      text-align: center;
+    }
+    #factsModal .close-btn {
+      position: absolute;
+      top: 12px;
+      right: 18px;
+      font-size: 2em;
+      color: #FFD700;
+      border: none;
+      background: none;
+      cursor: pointer;
+      outline: none;
+    }
+    #factsModal img {
+      display: block;
+      margin: 0 auto 12px auto;
+      border-radius: 50%;
+      width: 106px;
+      height: 106px;
+      background: #fff4;
+      object-fit: cover;
+      border: 3px solid #FFD700;
+      box-shadow: 0 2px 14px #0005;
+    }
+    #planetName {
+      font-size: 1.6em;
+      color: #FFD700;
+    }
+    #winModal {
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 99;
+      display: none;
+      background: linear-gradient(135deg, #2e2a60 85%, #252e56 100%);
+      border: 6px solid #FFD700;
+      box-shadow: 0 10px 36px #000c,0 2px 18px #FFD70355;
+      border-radius: 32px;
+      padding: 38px 40px 32px 40px;
+      text-align: center;
+      min-width: 290px;
+      max-width: 97vw;
+      color: #FFD700;
+      animation: win-pop .7s cubic-bezier(.26,2,.51,1.2) 1;
+    }
+    @keyframes win-pop {
+      0% { transform: scale(.7) translate(-50%,-50%) rotate(-12deg); opacity:.2;}
+      60% { transform: scale(1.09) translate(-50%,-50%) rotate(8deg);}
+      100% { transform: scale(1) translate(-50%,-50%) rotate(0deg); opacity:1;}
+    }
+    #mainRobotWin {
+      width: 116px; border-radius: 50%; background: #fff1; margin-bottom: 9px;
+      border: 3px solid #FFD700; box-shadow: 0 3px 20px #FFD70344;
+    }
+    #winModal h2 { font-size: 2em; color: #FFD700; margin: 10px 0 5px 0;}
+    #winModal p { font-size: 1.17em;}
+    .unlock-code {
+      background: #FFD700; color: #2e2a60; font-weight: bold;
+      border-radius: 12px; display: inline-block; padding: 9px 28px;
+      margin: 20px 0 5px 0; font-size: 1.28em; letter-spacing:.05em;
+      border: 2px dashed #8ED600;
+      box-shadow: 0 3px 18px #FFD70034;
+    }
+    #playAgainBtn {
+      margin-top: 18px;
+      padding: 13px 47px;
+      background: #4CAF50;
+      color: #fff;
+      font-weight: bold;
+      border-radius: 10px;
+      font-size: 1.1em;
+      border: 3px solid #FFD700;
+      cursor: pointer;
+      transition: background .2s, color .2s, transform .1s;
+      box-shadow: 0 4px 16px #01712b55;
+    }
+    #playAgainBtn:hover { background: #288941; transform: scale(1.05);}
+    @media (max-width: 700px) {
+      #dpad {left:8px; bottom:8px;transform:scale(.7);}
+      #badgeTray { padding:8px 9px 8px 6px;}
+      #gameHeaderZone { padding-top: 7px; }
+      #header{font-size: 1.09em;}
+      #winModal{padding:14vw 4vw 7vw 4vw;min-width:0;}
+    }
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+
+    <canvas id="starfield"></canvas>
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- UPDATED VERTICAL HEADER & BADGES -->
+    <div id="gameHeaderZone">
+      <div id="gameTitleStack">
+        <div id="header">🚀 Little Robot – Lost In Space 🤖</div>
+        <div id="badgeTray">
+          <span>Badges:</span>
+          <div id="badges"></div>
+          <span id="badgeCounter"></span>
+        </div>
+      </div>
+    </div>
+    <!-- END HEADER -->
+
+    <!-- D-Pad touch controls -->
+    <div id="dpad">
+      <div class="dpad-row"><button class="dpad-btn" id="dpadUp" aria-label="Move Up">▲</button></div>
+      <div class="dpad-row">
+        <button class="dpad-btn" id="dpadLeft" aria-label="Move Left">◀</button>
+        <button class="dpad-btn" id="dpadRight" aria-label="Move Right">▶</button>
+      </div>
+      <div class="dpad-row"><button class="dpad-btn" id="dpadDown" aria-label="Move Down">▼</button></div>
+    </div>
+
+    <!-- Modal for Fun Facts -->
+    <div id="factsModal">
+      <button class="close-btn" tabindex="1">&times;</button>
+      <img id="modalImg" src="" alt="" style="display:none;" />
+      <div id="planetName"></div>
+      <div id="planetFact"></div>
+    </div>
+    <!-- Win Modal -->
+    <div id="winModal">
+      <img id="mainRobotWin" src="little_robot.png" alt="Little Robot">
+      <h2>🎉 Mission Complete! 🎉</h2>
+      <p>You found Little Robot and collected all the planet badges!</p>
+      <div class="unlock-code">Unlock Code: <strong>CIRCUITS</strong></div>
+      <p>Use this code to unlock the next adventure!</p>
+      <button id="playAgainBtn">Play Again</button>
+    </div>
+    <!-- Audio -->
+    <audio id="cheerAudio" src="cheer.mp3"></audio>
+    <audio id="coinAudio" src="coin-drop.mp3"></audio>
+    <audio id="rocketAudio" src="rocket-launch.mp3"></audio>
+  </div>
+  <script>
+    // PLANETS, FACTS & BADGES ---------------------------------
+    const PLANETS = [
+      {name: "Mercury", color: "#9c7e4c", orbit: 65, speed: 0.030, fact: "Mercury is the smallest planet and closest to the Sun. It has no moons!"},
+      {name: "Venus", color: "#f6c371", orbit: 90, speed: 0.025, fact: "Venus spins backwards and is the hottest planet!"},
+      {name: "Earth", color: "#6BC0D6", orbit: 124, speed: 0.022, fact: "Earth is our home with air, water and lots of life!"},
+      {name: "Mars", color: "#F26B5E", orbit: 148, speed: 0.019, fact: "Mars is called the red planet and has the tallest volcano in the solar system!"},
+      {name: "Jupiter", color: "#DBC09A", orbit: 180, speed: 0.015, fact: "Jupiter is the biggest planet and has a big red spot storm!"},
+      {name: "Saturn", color: "#DED086", orbit: 220, speed: 0.012, fact: "Saturn has beautiful rings made of ice and rocks!"},
+      {name: "Uranus", color: "#7AD6E3", orbit: 255, speed: 0.009, fact: "Uranus spins on its side like a rolling ball!"},
+      {name: "Neptune", color: "#589BFD", orbit: 290, speed: 0.007, fact: "Neptune is blue and very windy!"},
+      {name: "Pluto", color: "#dacfc1", orbit: 330, speed: 0.005, fact: "Pluto is a small 'dwarf' planet far from the Sun!"},
+      {name: "Nibiru", color: "#974ae9", orbit: 370, speed: 0.004, fact: "Nibiru is mysterious—some say it hides in the outer solar system!"},
+    ];
+    const BADGE_EMOJIS = ["🌕","🌒","🪐","⭐","🔴","💍","❄️","🔵","⛄","👽"];
+    const TOTAL_PLANETS = PLANETS.length;
+
+    // Orbits and UI math
+    let angles = PLANETS.map(() => Math.random() * Math.PI * 2);
+
+    // Little Robot starts on Mars by default
+    let robotPlanetIndex = 3;
+    function randomRobotPlanet() {
+      return Math.floor(Math.random() * PLANETS.length);
+    }
+
+    // GAME STATE ------------------------------------
+    let collected = Array(TOTAL_PLANETS).fill(false);
+    let foundRobot = false, gameWon = false;
+    let movingDirs = {ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false};
+
+    // CANVAS ----------------------------------------
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const starfield = document.getElementById('starfield');
+    const badgeTray = document.getElementById('badges');
+    const badgeCounter = document.getElementById('badgeCounter');
+    // Responsive sizing
+    function resizeCanvas() {
+      canvas.width = innerWidth;
+      canvas.height = innerHeight;
+      starfield.width = innerWidth;
+      starfield.height = innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Draw starfield for background effect
+    function drawStarfield() {
+      let ctx = starfield.getContext('2d');
+      ctx.clearRect(0,0,starfield.width,starfield.height);
+      for (let i=0;i<90;i++) {
+        ctx.beginPath();
+        let x = Math.random()*starfield.width, y=Math.random()*starfield.height;
+        let rad = Math.random()*1.1+0.2;
+        ctx.arc(x,y,rad,0,2*Math.PI);
+        ctx.fillStyle = `rgba(255,255,255,${Math.random()*0.36+0.22})`;
+        ctx.fill();
+      }
+    }
+    drawStarfield();
+
+    // ROCKET -------------------------------
+    const rocketImg = new window.Image();
+    rocketImg.src = 'rocket.png';
+    const littleRobotImg = new window.Image();
+    littleRobotImg.src = 'little_robot.png';
+    let rocket = {
+      x: innerWidth/2, y: innerHeight/2-180,
+      w:70, h:100, angle:0, speed:0, lastDir:'ArrowUp', img:rocketImg
+    };
+    let rocketMoveStart = null, rocketAudioPlayed = false;
+
+    // AUDIO --------------------------------
+    const coinAudio = document.getElementById('coinAudio');
+    const cheerAudio = document.getElementById('cheerAudio');
+    const rocketAudio = document.getElementById('rocketAudio');
+    function playCoin() { if(coinAudio) {coinAudio.currentTime=0; coinAudio.play();} }
+    function playCheer() { if(cheerAudio) {cheerAudio.currentTime=0; cheerAudio.play();} }
+    function playRocket() {
+      if(rocketAudio && !rocketAudioPlayed) {
+        rocketAudio.currentTime = 0;
+        rocketAudio.loop = true;
+        rocketAudio.play();
+        rocketAudioPlayed = true;
+      }
+    }
+    function stopRocket() {
+      if(rocketAudio && rocketAudioPlayed) {
+        rocketAudio.pause();
+        rocketAudio.currentTime = 0;
+        rocketAudioPlayed = false;
+      }
+    }
+
+    // D-PAD EVENTS (Touch & Mouse)
+    document.getElementById("dpadUp").addEventListener("pointerdown", ()=>moveStart("ArrowUp"));  
+    document.getElementById("dpadDown").addEventListener("pointerdown", ()=>moveStart("ArrowDown"));
+    document.getElementById("dpadLeft").addEventListener("pointerdown", ()=>moveStart("ArrowLeft"));
+    document.getElementById("dpadRight").addEventListener("pointerdown", ()=>moveStart("ArrowRight"));
+    document.getElementById("dpadUp").addEventListener("pointerup", ()=>moveStop("ArrowUp"));  
+    document.getElementById("dpadDown").addEventListener("pointerup", ()=>moveStop("ArrowDown"));
+    document.getElementById("dpadLeft").addEventListener("pointerup", ()=>moveStop("ArrowLeft"));
+    document.getElementById("dpadRight").addEventListener("pointerup", ()=>moveStop("ArrowRight"));
+    // Touchend fallback
+    Array.from(document.querySelectorAll(".dpad-btn")).forEach(btn=>btn.addEventListener("touchend", ()=>Object.keys(movingDirs).forEach(moveStop)));
+    // Keyboard controls
+    window.addEventListener("keydown", (e)=>{
+      if(gameWon) return;
+      if(Object.keys(movingDirs).includes(e.key)) {
+        moveStart(e.key);
+        e.preventDefault();
+      }
+    });
+    window.addEventListener("keyup", (e)=>{
+      if(Object.keys(movingDirs).includes(e.key)) {
+        moveStop(e.key);
+        e.preventDefault();
+      }
+    });
+
+    function moveStart(dir) { movingDirs[dir]=true; playRocket();}
+    function moveStop(dir) { movingDirs[dir]=false;
+      if(!Object.values(movingDirs).some(Boolean)) stopRocket();
+    }
+
+    // Movement logic
+    function updateRocket(dt=16) {
+      if(gameWon) {stopRocket(); return;}
+      let sped = 5.7;
+      let dx=0, dy=0; let lastWasMove = false;
+      if(movingDirs["ArrowUp"])   {dy-=sped;rocket.lastDir="ArrowUp"};
+      if(movingDirs["ArrowDown"]) {dy+=sped;rocket.lastDir="ArrowDown"};
+      if(movingDirs["ArrowLeft"]) {dx-=sped;rocket.lastDir="ArrowLeft"};
+      if(movingDirs["ArrowRight"]){dx+=sped;rocket.lastDir="ArrowRight"};
+      if(dx||dy) lastWasMove=true;
+      let nx = rocket.x+dx, ny = rocket.y+dy, pad=16;
+      rocket.x = Math.max(pad, Math.min(innerWidth-pad, nx));
+      rocket.y = Math.max(pad, Math.min(innerHeight-pad, ny));
+      if(lastWasMove && window.navigator && "vibrate" in window.navigator) {window.navigator.vibrate(7);}
+    }
+
+    // Draw rocket
+    function drawRocket() {
+      if(!rocket.img.complete) return;
+      ctx.save();
+      ctx.translate(rocket.x, rocket.y);
+      // orient rocket
+      let angle = 0;
+      if(rocket.lastDir=="ArrowUp") angle=-Math.PI/2;
+      if(rocket.lastDir=="ArrowDown") angle=Math.PI/2;
+      if(rocket.lastDir=="ArrowLeft") angle=Math.PI;
+      if(rocket.lastDir=="ArrowRight") angle=0;
+      ctx.rotate(angle);
+      ctx.drawImage(rocket.img, -rocket.w/2, -rocket.h/2, rocket.w, rocket.h);
+      ctx.restore();
+    }
+
+    // Draw planets in orbit
+    function drawPlanets(time) {
+      let sunX = innerWidth/2, sunY = innerHeight/2;
+      // Sun
+      ctx.save();
+      let grad = ctx.createRadialGradient(sunX,sunY,28,sunX,sunY,75);
+      grad.addColorStop(0,"#FFF499");
+      grad.addColorStop(.22,"#FFD700");
+      grad.addColorStop(.5,"#f3c560CC");
+      grad.addColorStop(.96,"#ca891e11");  
+      grad.addColorStop(1,"#17161100");
+      ctx.beginPath();
+      ctx.arc(sunX, sunY, 70, 0, 2*Math.PI);
+      ctx.fillStyle = grad;
+      ctx.globalAlpha = 0.81;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.closePath();
+      ctx.restore();
+
+      // Each planet
+      PLANETS.forEach((p, i) => {
+        let angle = angles[i];
+        let x = sunX + p.orbit * Math.cos(angle);
+        let y = sunY + p.orbit * Math.sin(angle)*.98;
+        // Orbit ring
+        ctx.save();
+        ctx.setLineDash([2,13]);
+        ctx.strokeStyle="#FFD70033";
+        ctx.lineWidth=1.7;
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, p.orbit, 0, 2*Math.PI);
+        ctx.stroke();
+        ctx.restore();
+        // Planet
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x,y,22,0,2*Math.PI);
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = "#fff";
+        ctx.shadowBlur=8;
+        ctx.fill();
+        if(i==robotPlanetIndex && !foundRobot) {
+          ctx.drawImage(littleRobotImg, x-21, y-24, 43, 46);
+        }
+        ctx.restore();
+        // Token badge (float if collected)
+        ctx.save();
+        ctx.font = "bold 1.5em 'Fredoka One',arial,sans-serif";
+        ctx.textAlign = "center";
+        if(collected[i]) {
+          let floatY = Math.sin(time/360 + i)*8;
+          ctx.globalAlpha = 0.96;
+          ctx.beginPath();
+          ctx.arc(x,y-32+floatY,14,0,2*Math.PI);
+          ctx.fillStyle="#FFD700";
+          ctx.shadowColor="#FFD700";
+          ctx.shadowBlur=9;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.fillStyle="#2e2a60";
+          ctx.fillText(BADGE_EMOJIS[i],x,y-26+floatY);
+        }
+        ctx.restore();
+
+        // Animate planet
+        angles[i] += p.speed;
+        // Save planet draw position for click detection
+        p._x = x; p._y = y;
+      });
+    }
+
+    // Badge UI update
+    function updateBadges() {
+      badgeTray.innerHTML = "";
+      for(let i=0;i<TOTAL_PLANETS;i++) {
+        let span = document.createElement("div");
+        span.className = "badge" + (collected[i]?" collected":"");
+        span.innerText = BADGE_EMOJIS[i];
+        badgeTray.appendChild(span);
+      }
+      badgeCounter.innerText = collected.filter(Boolean).length + " / " + TOTAL_PLANETS;
+    }
+
+    // PLANET FACT & MODAL UI -------------------------------------------------
+    const factsModal = document.getElementById("factsModal");
+    const modalImg   = document.getElementById("modalImg");
+    const planetName = document.getElementById("planetName");
+    const planetFact = document.getElementById("planetFact");
+    function showFact(i) {
+      factsModal.style.display="block";
+      modalImg.style.display='none';
+      planetName.innerText=PLANETS[i].name;
+      planetFact.innerText=PLANETS[i].fact;
+      if(i===robotPlanetIndex && !foundRobot) {
+        modalImg.src = "little_robot.png";
+        modalImg.style.display = "block";
+      }
+      setTimeout(()=>{factsModal.focus();},70);
+    }
+    // Close modal
+    factsModal.querySelector(".close-btn").onclick = () => {factsModal.style.display='none';};
+    factsModal.addEventListener("click",(e)=>{
+      if(e.target === factsModal) factsModal.style.display='none';
+    });
+
+    // PLANET CLICK HANDLER --------------------------
+    canvas.addEventListener("pointerdown", (e)=>{
+      if(gameWon) return;
+      let bb = canvas.getBoundingClientRect();
+      let mx = (e.clientX - bb.left), my = (e.clientY - bb.top);
+      let found = false;
+      PLANETS.forEach((p,i) => {
+        let dx = mx - p._x, dy = my - p._y;
+        if(dx*dx+dy*dy<=22*22) {
+          found = true;
+          // Robot found?
+          if(i === robotPlanetIndex && !foundRobot) {
+            foundRobot = true;
+            collected[i] = true;
+            playCheer();
+            showFact(i);
+            updateBadges();
+          } else {
+            // New token
+            if(!collected[i]) {
+              collected[i]=true;
+              playCoin();
+              updateBadges();
+              showFact(i);
+              // WIN
+              if(collected.every(Boolean)&&foundRobot) showWin();
+            } else {
+              showFact(i);
+            }
+          }
+        }
+      });
+      if(found) e.preventDefault();
+    });
+
+    // Rocket collides with planet (for movement collection)
+    function checkRocketPlanetCollision() {
+      PLANETS.forEach((p,i) => {
+        let dx = rocket.x - p._x, dy = rocket.y - p._y;
+        if(dx*dx + dy*dy <= (38*38)) {
+          if(i === robotPlanetIndex && !foundRobot) {
+            foundRobot = true;
+            collected[i] = true;
+            playCheer();
+            showFact(i);
+            updateBadges();
+          } else if(!collected[i]) {
+            collected[i]=true;
+            playCoin();
+            updateBadges();
+            showFact(i);
+          }
+          // WIN?
+          if(collected.every(Boolean) && foundRobot) showWin();
+        }
+      });
+    }
+
+    // WIN SCREEN -----------------------------------------------
+    const winModal = document.getElementById("winModal");
+    const playAgainBtn = document.getElementById("playAgainBtn");
+    function showWin() {
+      gameWon = true;
+      setTimeout(()=>{
+        playCheer();
+        winModal.style.display="block";
+      },600);
+      stopRocket();
+    }
+    playAgainBtn.onclick = ()=>{
+      winModal.style.display="none";
+      startGame();
+    }
+
+    // GAMELOOP & INIT ------------------------------------------
+    function draw(time=0) {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      drawPlanets(time);
+      drawRocket();
+      checkRocketPlanetCollision();
+      requestAnimationFrame(draw);
+    }
+
+    function startGame() {
+      // Choose robot hiding spot on Mars (or random for replay)
+      robotPlanetIndex = 3; // Mars
+      if(Math.random() > 0.66) robotPlanetIndex = randomRobotPlanet();
+      collected = Array(TOTAL_PLANETS).fill(false);
+      collected[robotPlanetIndex]=false;
+      foundRobot = false;
+      gameWon = false;
+      // Rocket to starting pos
+      rocket.x = innerWidth/2;
+      rocket.y = innerHeight/2 - 180;
+      updateBadges();
+      drawStarfield();
+      stopRocket();
+      winModal.style.display="none";
+      factsModal.style.display="none";
+      requestAnimationFrame(draw);
+    }
+
+    // Update rocket on interval
+    setInterval(updateRocket, 16);
+
+    // Start!
+    startGame();
+
+    // Optional: focus game on click/tap for keyboard input on mobile
+    canvas.addEventListener("pointerdown", ()=>canvas.focus());
+
+    // Accessibility/Tab focus
+    canvas.tabIndex=1;
+    factsModal.tabIndex=2;
+    winModal.tabIndex=3;
+  </script>
+</body>
+</html>
