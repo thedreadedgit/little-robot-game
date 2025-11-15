@@ -418,7 +418,7 @@
     document.getElementById("dpadLeft").addEventListener("pointerup", ()=>moveStop("ArrowLeft"));
     document.getElementById("dpadRight").addEventListener("pointerup", ()=>moveStop("ArrowRight"));
     // Touchend fallback
-    Array.from(document.querySelectorAll(".dpad-btn")).forEach(btn=>btn.addEventListener("touchend", ()=>Object.keys(movingDirs).forEach(moveStop)));
+    Array.from(document.querySelectorAll(".dpad-btn")).forEach(btn=>btn.addEventListener("touchend", ()=>Object.keys(movingDirs).forEach(key=>moveStop(key))));
     // Keyboard controls
     window.addEventListener("keydown", (e)=>{
       if(gameWon) return;
@@ -442,12 +442,12 @@
     // Movement logic
     function updateRocket(dt=16) {
       if(gameWon) {stopRocket(); return;}
-      let sped = 5.7;
+      let speed = 5.7;
       let dx=0, dy=0; let lastWasMove = false;
-      if(movingDirs["ArrowUp"])   {dy-=sped;rocket.lastDir="ArrowUp"};
-      if(movingDirs["ArrowDown"]) {dy+=sped;rocket.lastDir="ArrowDown"};
-      if(movingDirs["ArrowLeft"]) {dx-=sped;rocket.lastDir="ArrowLeft"};
-      if(movingDirs["ArrowRight"]){dx+=sped;rocket.lastDir="ArrowRight"};
+      if(movingDirs["ArrowUp"])   {dy-=speed;rocket.lastDir="ArrowUp"};
+      if(movingDirs["ArrowDown"]) {dy+=speed;rocket.lastDir="ArrowDown"};
+      if(movingDirs["ArrowLeft"]) {dx-=speed;rocket.lastDir="ArrowLeft"};
+      if(movingDirs["ArrowRight"]){dx+=speed;rocket.lastDir="ArrowRight"};
       if(dx||dy) lastWasMove=true;
       let nx = rocket.x+dx, ny = rocket.y+dy, pad=16;
       rocket.x = Math.max(pad, Math.min(innerWidth-pad, nx));
@@ -665,7 +665,6 @@
       robotPlanetIndex = 3; // Mars
       if(Math.random() > 0.66) robotPlanetIndex = randomRobotPlanet();
       collected = Array(TOTAL_PLANETS).fill(false);
-      collected[robotPlanetIndex]=false;
       foundRobot = false;
       gameWon = false;
       // Rocket to starting pos
