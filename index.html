@@ -458,11 +458,11 @@
       if(lastWasMove && window.navigator && "vibrate" in window.navigator) {window.navigator.vibrate(7);}
     }
 
-    // Check if pointer is over rocket
+    // Check if pointer is over rocket (axis-aligned collision detection)
     function isPointerOverRocket(mx, my) {
       const dx = mx - rocket.x;
       const dy = my - rocket.y;
-      // Use ellipse collision for rocket shape
+      // Use ellipse collision for rocket shape (does not account for rotation)
       const radiusX = rocket.w / 2;
       const radiusY = rocket.h / 2;
       return (dx * dx) / (radiusX * radiusX) + (dy * dy) / (radiusY * radiusY) <= 1;
@@ -654,8 +654,8 @@
       
       // Update rocket position with boundary constraints
       const pad = 16;
-      rocket.x = Math.max(pad, Math.min(innerWidth - pad, mx));
-      rocket.y = Math.max(pad, Math.min(innerHeight - pad, my));
+      rocket.x = Math.max(pad, Math.min(canvas.width - pad, mx));
+      rocket.y = Math.max(pad, Math.min(canvas.height - pad, my));
       
       // Calculate angle of movement using atan2
       const dx = rocket.x - prevX;
