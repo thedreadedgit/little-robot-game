@@ -381,7 +381,7 @@
     const littleRobotImg = new window.Image();
     littleRobotImg.src = 'little_robot.png';
     let rocket = {
-      x: innerWidth/2, y: innerHeight/2-180,
+      x: canvas.width/2, y: canvas.height/2-180,
       w:70, h:100, angle:0, speed:0, lastDir:'ArrowUp', img:rocketImg
     };
     let rocketMoveStart = null, rocketAudioPlayed = false;
@@ -747,8 +747,8 @@
       foundRobot = false;
       gameWon = false;
       // Rocket to starting pos
-      rocket.x = innerWidth/2;
-      rocket.y = innerHeight/2 - 180;
+      rocket.x = canvas.width/2;
+      rocket.y = canvas.height/2 - 180;
       updateBadges();
       drawStarfield();
       stopRocket();
