@@ -261,6 +261,94 @@
       #header{font-size: 1.09em;}
       #winModal{padding:14vw 4vw 7vw 4vw;min-width:0;}
     }
+    /* Orbital Speed Control Slider */
+    #orbitSpeedControl {
+      position: absolute;
+      bottom: 40px;
+      right: 40px;
+      z-index: 10;
+      background: rgba(37, 46, 86, 0.9);
+      border: 2px solid #FFD700;
+      border-radius: 12px;
+      padding: 14px 18px;
+      box-shadow: 0 4px 12px #000a;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 180px;
+    }
+    #orbitSpeedControl label {
+      color: #FFD700;
+      font-size: 0.9em;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 2px;
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+    }
+    #timeScaleValue {
+      color: #FFD700;
+      font-size: 1.1em;
+      font-weight: bold;
+      text-align: center;
+      background: rgba(16, 16, 40, 0.6);
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid #ffa800;
+    }
+    #timeScaleSlider {
+      width: 100%;
+      height: 8px;
+      border-radius: 5px;
+      background: rgba(16, 16, 40, 0.7);
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      cursor: pointer;
+      border: 1px solid #FFD700;
+    }
+    #timeScaleSlider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #FFD700 60%, #df944b 100%);
+      cursor: pointer;
+      border: 2px solid #FFD700;
+      box-shadow: 0 2px 6px #0007;
+      transition: transform 0.15s;
+    }
+    #timeScaleSlider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+    #timeScaleSlider::-webkit-slider-thumb:active {
+      transform: scale(1.25);
+    }
+    #timeScaleSlider::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #FFD700 60%, #df944b 100%);
+      cursor: pointer;
+      border: 2px solid #FFD700;
+      box-shadow: 0 2px 6px #0007;
+      transition: transform 0.15s;
+    }
+    #timeScaleSlider::-moz-range-thumb:hover {
+      transform: scale(1.15);
+    }
+    #timeScaleSlider::-moz-range-thumb:active {
+      transform: scale(1.25);
+    }
+    @media (max-width: 700px) {
+      #orbitSpeedControl {
+        right: 8px;
+        bottom: 8px;
+        transform: scale(0.85);
+        transform-origin: bottom right;
+        min-width: 160px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -292,6 +380,13 @@
       <div class="dpad-row"><button class="dpad-btn" id="dpadDown" aria-label="Move Down">▼</button></div>
     </div>
 
+    <!-- Orbital Speed Control -->
+    <div id="orbitSpeedControl">
+      <label for="timeScaleSlider">⏱️ Orbit Speed</label>
+      <input type="range" id="timeScaleSlider" min="0.01" max="1.0" step="0.01" value="0.1" />
+      <div id="timeScaleValue">0.10x</div>
+    </div>
+
     <!-- Modal for Fun Facts -->
     <div id="factsModal">
       <button class="close-btn" tabindex="1">&times;</button>
@@ -314,6 +409,9 @@
     <audio id="rocketAudio" src="rocket-launch.mp3"></audio>
   </div>
   <script>
+    // GLOBAL ORBITAL SPEED MULTIPLIER ---------------------------------
+    let timeScale = 0.1;
+
     // PLANETS, FACTS & BADGES ---------------------------------
     const PLANETS = [
       {name: "Mercury", color: "#9c7e4c", orbit: 65, speed: 0.030, fact: "Mercury is the smallest planet and closest to the Sun. It has no moons!"},
@@ -536,8 +634,8 @@
         }
         ctx.restore();
 
-        // Animate planet
-        angles[i] += p.speed;
+        // Animate planet - Apply timeScale multiplier for dynamic orbit speed control
+        angles[i] += p.speed * timeScale;
         // Save planet draw position for click detection
         p._x = x; p._y = y;
       });
@@ -692,6 +790,16 @@
     canvas.tabIndex=1;
     factsModal.tabIndex=2;
     winModal.tabIndex=3;
+
+    // ORBITAL SPEED SLIDER CONTROL ---------------------------------
+    const timeScaleSlider = document.getElementById('timeScaleSlider');
+    const timeScaleValue = document.getElementById('timeScaleValue');
+    
+    // Update timeScale and display when slider changes
+    timeScaleSlider.addEventListener('input', function() {
+      timeScale = parseFloat(this.value);
+      timeScaleValue.innerText = timeScale.toFixed(2) + 'x';
+    });
   </script>
 </body>
 </html>
