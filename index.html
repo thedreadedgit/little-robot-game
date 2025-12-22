@@ -383,8 +383,8 @@
     <!-- Orbital Speed Control -->
     <div id="orbitSpeedControl">
       <label for="timeScaleSlider">⏱️ Orbit Speed</label>
-      <input type="range" id="timeScaleSlider" min="0.01" max="1.0" step="0.01" value="0.1" />
-      <div id="timeScaleValue">0.10x</div>
+      <input type="range" id="timeScaleSlider" min="0.01" max="1.0" step="0.01" />
+      <div id="timeScaleValue"></div>
     </div>
 
     <!-- Modal for Fun Facts -->
@@ -794,6 +794,10 @@
     // ORBITAL SPEED SLIDER CONTROL ---------------------------------
     const timeScaleSlider = document.getElementById('timeScaleSlider');
     const timeScaleValue = document.getElementById('timeScaleValue');
+    
+    // Initialize slider and display from timeScale variable
+    timeScaleSlider.value = timeScale;
+    timeScaleValue.innerText = timeScale.toFixed(2) + 'x';
     
     // Update timeScale and display when slider changes
     timeScaleSlider.addEventListener('input', function() {
