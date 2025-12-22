@@ -453,8 +453,8 @@
       if(movingDirs["ArrowRight"]){dx+=sped;rocket.lastDir="ArrowRight"};
       if(dx||dy) lastWasMove=true;
       let nx = rocket.x+dx, ny = rocket.y+dy, pad=16;
-      rocket.x = Math.max(pad, Math.min(innerWidth-pad, nx));
-      rocket.y = Math.max(pad, Math.min(innerHeight-pad, ny));
+      rocket.x = Math.max(pad, Math.min(canvas.width-pad, nx));
+      rocket.y = Math.max(pad, Math.min(canvas.height-pad, ny));
       if(lastWasMove && window.navigator && "vibrate" in window.navigator) {window.navigator.vibrate(7);}
     }
 
