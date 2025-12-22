@@ -492,7 +492,7 @@
 
     // Draw planets in orbit
     function drawPlanets(time) {
-      let sunX = innerWidth/2, sunY = innerHeight/2;
+      let sunX = canvas.width/2, sunY = canvas.height/2;
       // Sun
       ctx.save();
       let grad = ctx.createRadialGradient(sunX,sunY,28,sunX,sunY,75);
