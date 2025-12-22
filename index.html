@@ -795,14 +795,19 @@
     const timeScaleSlider = document.getElementById('timeScaleSlider');
     const timeScaleValue = document.getElementById('timeScaleValue');
     
+    // Helper function to format timeScale display
+    function formatTimeScaleDisplay(value) {
+      return value.toFixed(2) + 'x';
+    }
+    
     // Initialize slider and display from timeScale variable
     timeScaleSlider.value = timeScale;
-    timeScaleValue.innerText = timeScale.toFixed(2) + 'x';
+    timeScaleValue.innerText = formatTimeScaleDisplay(timeScale);
     
     // Update timeScale and display when slider changes
     timeScaleSlider.addEventListener('input', function() {
       timeScale = parseFloat(this.value);
-      timeScaleValue.innerText = timeScale.toFixed(2) + 'x';
+      timeScaleValue.innerText = formatTimeScaleDisplay(timeScale);
     });
   </script>
 </body>
