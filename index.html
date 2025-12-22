@@ -388,8 +388,6 @@
     
     // Drag state
     let isDragging = false;
-    let dragPrevX = 0;
-    let dragPrevY = 0;
 
     // AUDIO --------------------------------
     const coinAudio = document.getElementById('coinAudio');
@@ -475,14 +473,18 @@
       if(!rocket.img.complete) return;
       ctx.save();
       ctx.translate(rocket.x, rocket.y);
-      // orient rocket
-      let angle = 0;
-      if(rocket.lastDir=="ArrowUp") angle=-Math.PI/2;
-      if(rocket.lastDir=="ArrowDown") angle=Math.PI/2;
-      if(rocket.lastDir=="ArrowLeft") angle=Math.PI;
-      if(rocket.lastDir=="ArrowRight") angle=0;
-      // Use stored angle if dragging
-      if(isDragging) angle = rocket.angle;
+      // Calculate rocket angle
+      let angle;
+      if(isDragging) {
+        // Use stored angle from drag movement
+        angle = rocket.angle;
+      } else {
+        // Use directional angle from keyboard/D-pad controls
+        if(rocket.lastDir=="ArrowUp") angle=-Math.PI/2;
+        else if(rocket.lastDir=="ArrowDown") angle=Math.PI/2;
+        else if(rocket.lastDir=="ArrowLeft") angle=Math.PI;
+        else angle=0; // ArrowRight
+      }
       ctx.rotate(angle);
       ctx.drawImage(rocket.img, -rocket.w/2, -rocket.h/2, rocket.w, rocket.h);
       ctx.restore();
@@ -603,8 +605,6 @@
       // Check if clicking on rocket to start dragging
       if(isPointerOverRocket(mx, my)) {
         isDragging = true;
-        dragPrevX = mx;
-        dragPrevY = my;
         playRocket();
         e.preventDefault();
         return;
@@ -648,9 +648,9 @@
       let bb = canvas.getBoundingClientRect();
       let mx = (e.clientX - bb.left), my = (e.clientY - bb.top);
       
-      // Calculate movement delta
-      const dx = mx - dragPrevX;
-      const dy = my - dragPrevY;
+      // Store previous rocket position for angle calculation
+      const prevX = rocket.x;
+      const prevY = rocket.y;
       
       // Update rocket position with boundary constraints
       const pad = 16;
@@ -658,13 +658,11 @@
       rocket.y = Math.max(pad, Math.min(innerHeight - pad, my));
       
       // Calculate angle of movement using atan2
+      const dx = rocket.x - prevX;
+      const dy = rocket.y - prevY;
       if(dx !== 0 || dy !== 0) {
         rocket.angle = Math.atan2(dy, dx);
       }
-      
-      // Update previous position
-      dragPrevX = mx;
-      dragPrevY = my;
       
       // Haptic feedback
       if(window.navigator && "vibrate" in window.navigator) {
