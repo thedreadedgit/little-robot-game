@@ -459,10 +459,13 @@
     }
 
     // Check if pointer is over rocket (axis-aligned collision detection)
+    // Note: Uses ellipse collision without rotation for simplicity. The rocket's
+    // hitbox remains axis-aligned regardless of rotation, which works well for
+    // gameplay since the rocket is relatively small and drag initiation is forgiving.
     function isPointerOverRocket(mx, my) {
       const dx = mx - rocket.x;
       const dy = my - rocket.y;
-      // Use ellipse collision for rocket shape (does not account for rotation)
+      // Use ellipse collision for rocket shape
       const radiusX = rocket.w / 2;
       const radiusY = rocket.h / 2;
       return (dx * dx) / (radiusX * radiusX) + (dy * dy) / (radiusY * radiusY) <= 1;
@@ -658,6 +661,8 @@
       rocket.y = Math.max(pad, Math.min(canvas.height - pad, my));
       
       // Calculate angle of movement using atan2
+      // Note: Angle only updates when there's actual movement. If the user
+      // drags slowly or pauses, the rocket maintains its last rotation angle.
       const dx = rocket.x - prevX;
       const dy = rocket.y - prevY;
       if(dx !== 0 || dy !== 0) {
