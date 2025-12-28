@@ -343,6 +343,7 @@
     let collected = Array(TOTAL_PLANETS).fill(false);
     let foundRobot = false, gameWon = false;
     let movingDirs = {ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false};
+    let gameStarted = false;
 
     // CANVAS ----------------------------------------
     const canvas = document.getElementById('gameCanvas');
@@ -434,7 +435,11 @@
       }
     });
 
-    function moveStart(dir) { movingDirs[dir]=true; playRocket();}
+    function moveStart(dir) { 
+      gameStarted = true;
+      movingDirs[dir]=true; 
+      playRocket();
+    }
     function moveStop(dir) { movingDirs[dir]=false;
       if(!Object.values(movingDirs).some(Boolean)) stopRocket();
     }
@@ -580,6 +585,7 @@
     // PLANET CLICK HANDLER --------------------------
     canvas.addEventListener("pointerdown", (e)=>{
       if(gameWon) return;
+      gameStarted = true;
       let bb = canvas.getBoundingClientRect();
       let mx = (e.clientX - bb.left), my = (e.clientY - bb.top);
       let found = false;
@@ -614,6 +620,7 @@
 
     // Rocket collides with planet (for movement collection)
     function checkRocketPlanetCollision() {
+      if(!gameStarted) return;
       PLANETS.forEach((p,i) => {
         let dx = rocket.x - p._x, dy = rocket.y - p._y;
         if(dx*dx + dy*dy <= (38*38)) {
@@ -668,6 +675,7 @@
       collected[robotPlanetIndex]=false;
       foundRobot = false;
       gameWon = false;
+      gameStarted = false;
       // Rocket to starting pos
       rocket.x = innerWidth/2;
       rocket.y = innerHeight/2 - 180;
