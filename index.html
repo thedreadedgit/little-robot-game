@@ -381,10 +381,13 @@
     const littleRobotImg = new window.Image();
     littleRobotImg.src = 'little_robot.png';
     let rocket = {
-      x: innerWidth/2, y: innerHeight/2-180,
+      x: canvas.width/2, y: canvas.height/2-180,
       w:70, h:100, angle:0, speed:0, lastDir:'ArrowUp', img:rocketImg
     };
     let rocketMoveStart = null, rocketAudioPlayed = false;
+    
+    // Drag state
+    let isDragging = false;
 
     // AUDIO --------------------------------
     const coinAudio = document.getElementById('coinAudio');
@@ -450,9 +453,22 @@
       if(movingDirs["ArrowRight"]){dx+=sped;rocket.lastDir="ArrowRight"};
       if(dx||dy) lastWasMove=true;
       let nx = rocket.x+dx, ny = rocket.y+dy, pad=16;
-      rocket.x = Math.max(pad, Math.min(innerWidth-pad, nx));
-      rocket.y = Math.max(pad, Math.min(innerHeight-pad, ny));
+      rocket.x = Math.max(pad, Math.min(canvas.width-pad, nx));
+      rocket.y = Math.max(pad, Math.min(canvas.height-pad, ny));
       if(lastWasMove && window.navigator && "vibrate" in window.navigator) {window.navigator.vibrate(7);}
+    }
+
+    // Check if pointer is over rocket (axis-aligned collision detection)
+    // Note: Uses ellipse collision without rotation for simplicity. The rocket's
+    // hitbox remains axis-aligned regardless of rotation, which works well for
+    // gameplay since the rocket is relatively small and drag initiation is forgiving.
+    function isPointerOverRocket(mx, my) {
+      const dx = mx - rocket.x;
+      const dy = my - rocket.y;
+      // Use ellipse collision for rocket shape
+      const radiusX = rocket.w / 2;
+      const radiusY = rocket.h / 2;
+      return (dx * dx) / (radiusX * radiusX) + (dy * dy) / (radiusY * radiusY) <= 1;
     }
 
     // Draw rocket
@@ -460,12 +476,18 @@
       if(!rocket.img.complete) return;
       ctx.save();
       ctx.translate(rocket.x, rocket.y);
-      // orient rocket
-      let angle = 0;
-      if(rocket.lastDir=="ArrowUp") angle=-Math.PI/2;
-      if(rocket.lastDir=="ArrowDown") angle=Math.PI/2;
-      if(rocket.lastDir=="ArrowLeft") angle=Math.PI;
-      if(rocket.lastDir=="ArrowRight") angle=0;
+      // Calculate rocket angle
+      let angle;
+      if(isDragging) {
+        // Use stored angle from drag movement
+        angle = rocket.angle;
+      } else {
+        // Use directional angle from keyboard/D-pad controls
+        if(rocket.lastDir=="ArrowUp") angle=-Math.PI/2;
+        else if(rocket.lastDir=="ArrowDown") angle=Math.PI/2;
+        else if(rocket.lastDir=="ArrowLeft") angle=Math.PI;
+        else angle=0; // ArrowRight
+      }
       ctx.rotate(angle);
       ctx.drawImage(rocket.img, -rocket.w/2, -rocket.h/2, rocket.w, rocket.h);
       ctx.restore();
@@ -473,7 +495,7 @@
 
     // Draw planets in orbit
     function drawPlanets(time) {
-      let sunX = innerWidth/2, sunY = innerHeight/2;
+      let sunX = canvas.width/2, sunY = canvas.height/2;
       // Sun
       ctx.save();
       let grad = ctx.createRadialGradient(sunX,sunY,28,sunX,sunY,75);
@@ -582,6 +604,16 @@
       if(gameWon) return;
       let bb = canvas.getBoundingClientRect();
       let mx = (e.clientX - bb.left), my = (e.clientY - bb.top);
+      
+      // Check if clicking on rocket to start dragging
+      if(isPointerOverRocket(mx, my)) {
+        isDragging = true;
+        playRocket();
+        e.preventDefault();
+        return;
+      }
+      
+      // Otherwise check for planet clicks
       let found = false;
       PLANETS.forEach((p,i) => {
         let dx = mx - p._x, dy = my - p._y;
@@ -610,6 +642,57 @@
         }
       });
       if(found) e.preventDefault();
+    });
+
+    // POINTER MOVE HANDLER for dragging
+    canvas.addEventListener("pointermove", (e)=>{
+      if(!isDragging || gameWon) return;
+      
+      let bb = canvas.getBoundingClientRect();
+      let mx = (e.clientX - bb.left), my = (e.clientY - bb.top);
+      
+      // Store previous rocket position for angle calculation
+      const prevX = rocket.x;
+      const prevY = rocket.y;
+      
+      // Update rocket position with boundary constraints
+      const pad = 16;
+      rocket.x = Math.max(pad, Math.min(canvas.width - pad, mx));
+      rocket.y = Math.max(pad, Math.min(canvas.height - pad, my));
+      
+      // Calculate angle of movement using atan2
+      // Note: Angle only updates when there's actual movement. If the user
+      // drags slowly or pauses, the rocket maintains its last rotation angle.
+      const dx = rocket.x - prevX;
+      const dy = rocket.y - prevY;
+      if(dx !== 0 || dy !== 0) {
+        rocket.angle = Math.atan2(dy, dx);
+      }
+      
+      // Haptic feedback
+      if(window.navigator && "vibrate" in window.navigator) {
+        window.navigator.vibrate(7);
+      }
+      
+      e.preventDefault();
+    });
+
+    // POINTER UP HANDLER to stop dragging
+    canvas.addEventListener("pointerup", (e)=>{
+      if(isDragging) {
+        isDragging = false;
+        stopRocket();
+        e.preventDefault();
+      }
+    });
+
+    // POINTER CANCEL HANDLER to stop dragging
+    canvas.addEventListener("pointercancel", (e)=>{
+      if(isDragging) {
+        isDragging = false;
+        stopRocket();
+        e.preventDefault();
+      }
     });
 
     // Rocket collides with planet (for movement collection)
@@ -669,8 +752,8 @@
       foundRobot = false;
       gameWon = false;
       // Rocket to starting pos
-      rocket.x = innerWidth/2;
-      rocket.y = innerHeight/2 - 180;
+      rocket.x = canvas.width/2;
+      rocket.y = canvas.height/2 - 180;
       updateBadges();
       drawStarfield();
       stopRocket();
