@@ -382,9 +382,13 @@
     littleRobotImg.src = 'little_robot.png';
     let rocket = {
       x: innerWidth/2, y: innerHeight/2-180,
-      w:70, h:100, angle:0, speed:0, lastDir:'ArrowUp', img:rocketImg
+      w:70, h:100, angle:0, speed:0, lastDir:'ArrowUp', img:rocketImg,
+      vx: 0, vy: 0 // Velocity components for smooth movement
     };
     let rocketMoveStart = null, rocketAudioPlayed = false;
+    
+    // Afterburn particle system for exhaust plumes
+    let exhaustParticles = [];
 
     // AUDIO --------------------------------
     const coinAudio = document.getElementById('coinAudio');
@@ -439,20 +443,127 @@
       if(!Object.values(movingDirs).some(Boolean)) stopRocket();
     }
 
-    // Movement logic
+    // Movement logic with smooth acceleration/deceleration for dynamic feel
     function updateRocket(dt=16) {
-      if(gameWon) {stopRocket(); return;}
-      let sped = 5.7;
-      let dx=0, dy=0; let lastWasMove = false;
-      if(movingDirs["ArrowUp"])   {dy-=sped;rocket.lastDir="ArrowUp"};
-      if(movingDirs["ArrowDown"]) {dy+=sped;rocket.lastDir="ArrowDown"};
-      if(movingDirs["ArrowLeft"]) {dx-=sped;rocket.lastDir="ArrowLeft"};
-      if(movingDirs["ArrowRight"]){dx+=sped;rocket.lastDir="ArrowRight"};
-      if(dx||dy) lastWasMove=true;
-      let nx = rocket.x+dx, ny = rocket.y+dy, pad=16;
+      if(gameWon) {stopRocket(); rocket.vx = 0; rocket.vy = 0; return;}
+      
+      // Acceleration and max speed settings
+      const acceleration = 0.48;
+      const maxSpeed = 6.2;
+      const friction = 0.88; // Deceleration when no input
+      
+      let targetVx = 0, targetVy = 0;
+      let isMoving = false;
+      
+      // Determine target velocity based on input
+      if(movingDirs["ArrowUp"])   {targetVy -= maxSpeed; rocket.lastDir="ArrowUp"; isMoving=true;}
+      if(movingDirs["ArrowDown"]) {targetVy += maxSpeed; rocket.lastDir="ArrowDown"; isMoving=true;}
+      if(movingDirs["ArrowLeft"]) {targetVx -= maxSpeed; rocket.lastDir="ArrowLeft"; isMoving=true;}
+      if(movingDirs["ArrowRight"]){targetVx += maxSpeed; rocket.lastDir="ArrowRight"; isMoving=true;}
+      
+      // Smooth acceleration towards target velocity
+      if(isMoving) {
+        rocket.vx += (targetVx - rocket.vx) * acceleration;
+        rocket.vy += (targetVy - rocket.vy) * acceleration;
+      } else {
+        // Apply friction when no input for smooth deceleration
+        rocket.vx *= friction;
+        rocket.vy *= friction;
+        // Stop completely when velocity is very small
+        if(Math.abs(rocket.vx) < 0.1) rocket.vx = 0;
+        if(Math.abs(rocket.vy) < 0.1) rocket.vy = 0;
+      }
+      
+      // Update position with velocity
+      let nx = rocket.x + rocket.vx;
+      let ny = rocket.y + rocket.vy;
+      let pad = 16;
       rocket.x = Math.max(pad, Math.min(innerWidth-pad, nx));
       rocket.y = Math.max(pad, Math.min(innerHeight-pad, ny));
-      if(lastWasMove && window.navigator && "vibrate" in window.navigator) {window.navigator.vibrate(7);}
+      
+      // Emit exhaust particles when moving
+      if(isMoving || Math.abs(rocket.vx) > 0.5 || Math.abs(rocket.vy) > 0.5) {
+        emitExhaustParticles();
+      }
+      
+      // Haptic feedback when moving
+      if(isMoving && window.navigator && "vibrate" in window.navigator) {
+        window.navigator.vibrate(7);
+      }
+    }
+    
+    // Emit exhaust particles from rocket's exhaust based on direction
+    function emitExhaustParticles() {
+      // Calculate exhaust origin based on rocket direction
+      let exhaustOffsetX = 0, exhaustOffsetY = 0;
+      let angle = 0;
+      
+      if(rocket.lastDir === "ArrowUp") {
+        angle = -Math.PI/2;
+        exhaustOffsetY = rocket.h/2; // Emit from bottom when going up
+      } else if(rocket.lastDir === "ArrowDown") {
+        angle = Math.PI/2;
+        exhaustOffsetY = -rocket.h/2; // Emit from top when going down
+      } else if(rocket.lastDir === "ArrowLeft") {
+        angle = Math.PI;
+        exhaustOffsetX = rocket.w/2; // Emit from right when going left
+      } else if(rocket.lastDir === "ArrowRight") {
+        angle = 0;
+        exhaustOffsetX = -rocket.w/2; // Emit from left when going right
+      }
+      
+      // Rotate offset based on rocket orientation
+      let cosA = Math.cos(angle), sinA = Math.sin(angle);
+      let rotX = exhaustOffsetX * cosA - exhaustOffsetY * sinA;
+      let rotY = exhaustOffsetX * sinA + exhaustOffsetY * cosA;
+      
+      // Create 2-3 particles per frame for realistic plume
+      for(let i = 0; i < 2; i++) {
+        exhaustParticles.push({
+          x: rocket.x + rotX + (Math.random()-0.5)*8,
+          y: rocket.y + rotY + (Math.random()-0.5)*8,
+          vx: -rocket.vx * 0.3 + (Math.random()-0.5)*1.5,
+          vy: -rocket.vy * 0.3 + (Math.random()-0.5)*1.5,
+          life: 1.0,
+          size: Math.random()*6 + 4
+        });
+      }
+    }
+    
+    // Update and draw exhaust particles
+    function updateExhaustParticles() {
+      for(let i = exhaustParticles.length - 1; i >= 0; i--) {
+        let p = exhaustParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.025; // Fade out over time
+        p.size *= 0.97; // Shrink over time
+        
+        // Remove dead particles
+        if(p.life <= 0) {
+          exhaustParticles.splice(i, 1);
+        }
+      }
+    }
+    
+    function drawExhaustParticles() {
+      exhaustParticles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = p.life * 0.7;
+        
+        // Create gradient for realistic flame effect
+        let grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+        grad.addColorStop(0, '#FFD700'); // Bright yellow/gold center
+        grad.addColorStop(0.4, '#FF8C00'); // Orange middle
+        grad.addColorStop(0.8, '#FF4500'); // Red-orange outer
+        grad.addColorStop(1, 'rgba(255,69,0,0)'); // Transparent edge
+        
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.restore();
+      });
     }
 
     // Draw rocket
@@ -655,7 +766,9 @@
     function draw(time=0) {
       ctx.clearRect(0,0,canvas.width,canvas.height);
       drawPlanets(time);
+      drawExhaustParticles(); // Draw exhaust behind rocket
       drawRocket();
+      updateExhaustParticles(); // Update particle physics
       checkRocketPlanetCollision();
       requestAnimationFrame(draw);
     }
@@ -671,6 +784,9 @@
       // Rocket to starting pos
       rocket.x = innerWidth/2;
       rocket.y = innerHeight/2 - 180;
+      rocket.vx = 0;
+      rocket.vy = 0;
+      exhaustParticles = []; // Clear exhaust particles on reset
       updateBadges();
       drawStarfield();
       stopRocket();
